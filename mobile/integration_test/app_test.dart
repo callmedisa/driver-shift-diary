@@ -1,4 +1,4 @@
-// End-to-end check on a real emulator/simulator against the real API
+// End-to-end check on a real device or emulator against the real API
 // (started from data/trips.json). Run by CI; locally:
 //   flutter test integration_test/app_test.dart --dart-define=API_BASE_URL=http://localhost:8000
 // With screenshots (saved to mobile/screenshots/):
@@ -12,9 +12,8 @@ import 'package:integration_test/integration_test.dart';
 
 const _nbsp = ' ';
 
-/// Screenshots need `flutter drive` with test_driver/integration_test.dart
-/// (used on Android). On iOS CI runs `flutter test` and screenshots the
-/// simulator instead, so in-test screenshots are opt-in.
+/// Screenshots need `flutter drive` with test_driver/integration_test.dart,
+/// so they are opt-in: plain `flutter test` runs skip them.
 const _takeScreenshots = bool.fromEnvironment('SCREENSHOTS');
 
 void main() {
