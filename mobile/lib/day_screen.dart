@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import 'api.dart';
-import 'format.dart';
 import 'models.dart';
 import 'widgets.dart';
 
@@ -103,12 +102,14 @@ class _DayScreenState extends State<DayScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final report = _report;
+    final current = report != null && report.date == _date ? report : null;
     return Scaffold(
-      appBar: AppBar(title: const Text('Дневник смен')),
       body: Column(
         children: [
-          _DayPicker(
+          DayHeader(
             date: _date,
+            summary: current?.summary,
             onPrevious: _date == null ? null : () => _shift(-1),
             onNext: _date == null ? null : () => _shift(1),
             onPick: _pickDate,
@@ -122,16 +123,10 @@ class _DayScreenState extends State<DayScreen> {
   Widget _body() {
     if (_error != null) {
       return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(_error!, textAlign: TextAlign.center),
-              const SizedBox(height: 12),
-              FilledButton(onPressed: _retry, child: const Text('Повторить')),
-            ],
-          ),
+        child: MessageView(
+          icon: Icons.cloud_off_rounded,
+          message: _error!,
+          action: FilledButton(onPressed: _retry, child: const Text('Повторить')),
         ),
       );
     }
@@ -139,66 +134,32 @@ class _DayScreenState extends State<DayScreen> {
     if (report == null || (_loading && report.date != _date)) {
       return const Center(child: CircularProgressIndicator());
     }
+    final text = Theme.of(context).textTheme;
     return RefreshIndicator(
       onRefresh: () => _load(report.date),
       child: ListView(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
         children: [
-          SummaryCard(summary: report.summary),
-          const SizedBox(height: 8),
-          if (report.trips.isEmpty)
-            const Padding(
-              padding: EdgeInsets.all(32),
-              child: Text('В этот день поездок не было', textAlign: TextAlign.center),
-            )
-          else
-            Card(
-              child: Column(children: [for (final t in report.trips) TripTile(trip: t)]),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-class _DayPicker extends StatelessWidget {
-  const _DayPicker({
-    required this.date,
-    required this.onPrevious,
-    required this.onNext,
-    required this.onPick,
-  });
-
-  final DateTime? date;
-  final VoidCallback? onPrevious;
-  final VoidCallback? onNext;
-  final VoidCallback onPick;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-      child: Row(
-        children: [
-          IconButton(
-            tooltip: 'Предыдущий день',
-            onPressed: onPrevious,
-            icon: const Icon(Icons.chevron_left),
-          ),
-          Expanded(
-            child: TextButton(
-              onPressed: onPick,
-              child: Text(
-                date == null ? '…' : displayDate(date!),
-                style: Theme.of(context).textTheme.titleMedium,
+          StatTiles(summary: report.summary),
+          const SizedBox(height: 12),
+          PaymentSplit(summary: report.summary),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              Text(
+                'Поездки',
+                style: text.titleMedium?.copyWith(color: AppColors.text, fontWeight: FontWeight.w700),
               ),
-            ),
+              const Spacer(),
+              Text('${report.trips.length}', style: text.titleSmall?.copyWith(color: AppColors.muted)),
+            ],
           ),
-          IconButton(
-            tooltip: 'Следующий день',
-            onPressed: onNext,
-            icon: const Icon(Icons.chevron_right),
-          ),
+          const SizedBox(height: 10),
+          if (report.trips.isEmpty)
+            const MessageView(icon: Icons.event_busy_rounded, message: 'В этот день поездок не было')
+          else
+            for (final t in report.trips)
+              Padding(padding: const EdgeInsets.only(bottom: 10), child: TripCard(trip: t)),
         ],
       ),
     );

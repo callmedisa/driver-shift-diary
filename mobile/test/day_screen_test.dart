@@ -37,6 +37,10 @@ Widget _app(http.Client client) => MaterialApp(
 
 void main() {
   testWidgets('opens the latest day with trips and shows its summary', (tester) async {
+    // A phone-sized screen (390x844), so both trips are laid out.
+    tester.view.physicalSize = const Size(1170, 2532);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
     final client = MockClient((request) async => switch (request.url.path) {
           '/api/days' => _json(['2026-10-01']),
           '/api/days/2026-10-01' => _json(_oct1),
@@ -47,10 +51,14 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Чт, 01.10.2026'), findsOneWidget);
-    expect(find.text('3 315 ₸'), findsOneWidget); // на руки
+    expect(find.text('3 315 ₸'), findsOneWidget); // на руки, в шапке
+    expect(find.text('3 900 ₸'), findsOneWidget); // выручка
     expect(find.text('−585 ₸'), findsOneWidget); // комиссия
-    expect(find.text('1 500 / 2 400'), findsOneWidget); // наличные / карта
-    expect(find.text('08:10–08:32'), findsOneWidget);
+    // 1 500 ₸ appears twice: in the cash/card legend and as trip t2's amount.
+    expect(find.text('1 500 ₸'), findsNWidgets(2));
+    expect(find.text('08:10'), findsOneWidget);
+    expect(find.text('08:32'), findsOneWidget);
+    expect(find.text('Карта'), findsNWidgets(2)); // legend + trip t1 chip
   });
 
   testWidgets('switches to the next day', (tester) async {
@@ -89,7 +97,7 @@ void main() {
 
     expect(find.text('Пт, 02.10.2026'), findsOneWidget);
     expect(find.text('В этот день поездок не было'), findsOneWidget);
-    expect(find.text('08:10–08:32'), findsNothing);
+    expect(find.text('08:10'), findsNothing);
   });
 
   testWidgets('shows an error with a retry button when the server is down', (tester) async {

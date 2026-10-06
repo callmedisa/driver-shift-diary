@@ -1,6 +1,6 @@
 enum Payment {
-  cash('нал.'),
-  card('карта');
+  cash('Наличные'),
+  card('Карта');
 
   const Payment(this.label);
   final String label;

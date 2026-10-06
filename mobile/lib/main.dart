@@ -3,6 +3,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'api.dart';
 import 'day_screen.dart';
+import 'widgets.dart';
 
 /// Override at build time: flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8000
 /// (10.0.2.2 is the host machine as seen from the Android emulator).
@@ -26,11 +27,10 @@ class DriverDiaryApp extends StatelessWidget {
       locale: const Locale('ru'),
       supportedLocales: const [Locale('ru')],
       localizationsDelegates: GlobalMaterialLocalizations.delegates,
-      theme: ThemeData(colorSchemeSeed: const Color(0xFF1E6B52), useMaterial3: true),
-      darkTheme: ThemeData(
-        colorSchemeSeed: const Color(0xFF1E6B52),
-        brightness: Brightness.dark,
+      theme: ThemeData(
         useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(seedColor: AppColors.brand, surface: Colors.white),
+        scaffoldBackgroundColor: AppColors.background,
       ),
       home: DayScreen(api: api),
     );
