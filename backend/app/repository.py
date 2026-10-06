@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS trips (
     CHECK (end_utc > start_utc)
 );
 CREATE INDEX IF NOT EXISTS trips_local_date ON trips (local_date, start_utc);
+CREATE INDEX IF NOT EXISTS trips_time ON trips (start_utc, end_utc);
 """
 
 
@@ -26,6 +27,17 @@ class TripConflict(Exception):
 
     def __init__(self, existing: Trip):
         super().__init__(f"trip {existing.id!r} already exists with different data")
+        self.existing = existing
+
+
+class TripOverlap(Exception):
+    """The trip's time range overlaps another trip: a driver drives one trip at a time.
+
+    This also catches the same trip re-sent under a new id.
+    """
+
+    def __init__(self, existing: Trip):
+        super().__init__(f"trip overlaps existing trip {existing.id!r}")
         self.existing = existing
 
 
@@ -38,7 +50,7 @@ class TripRepository:
 
     @contextmanager
     def _connect(self) -> Iterator[sqlite3.Connection]:
-        conn = sqlite3.connect(self.path)
+        conn = sqlite3.connect(self.path, timeout=10)
         conn.row_factory = sqlite3.Row
         try:
             with conn:  # commits on success, rolls back on error
@@ -46,39 +58,62 @@ class TripRepository:
         finally:
             conn.close()
 
+    @contextmanager
+    def _write_transaction(self) -> Iterator[sqlite3.Connection]:
+        """BEGIN IMMEDIATE takes the write lock up front, so check-then-insert
+        sequences cannot interleave between concurrent requests."""
+        conn = sqlite3.connect(self.path, timeout=10, isolation_level=None)
+        conn.row_factory = sqlite3.Row
+        try:
+            conn.execute("BEGIN IMMEDIATE")
+            try:
+                yield conn
+                conn.execute("COMMIT")
+            except BaseException:
+                conn.execute("ROLLBACK")
+                raise
+        finally:
+            conn.close()
+
     def add(self, trip: Trip) -> tuple[Trip, bool]:
         """Store a trip idempotently.
 
         Returns (trip, created). Re-sending the same trip returns the stored one
-        with created=False; re-using an id with different data raises TripConflict.
-        The INSERT ... ON CONFLICT DO NOTHING is atomic, so two concurrent
-        requests with the same id cannot both create a row.
+        with created=False. Re-using an id with different data raises
+        TripConflict; a time range that overlaps another trip raises TripOverlap.
         """
-        with self._connect() as conn:
-            cur = conn.execute(
+        start, end = _utc_text(trip.start), _utc_text(trip.end)
+        with self._write_transaction() as conn:
+            row = conn.execute("SELECT * FROM trips WHERE id = ?", (trip.id,)).fetchone()
+            if row is not None:
+                existing = self._from_row(row)
+                if existing.same_as(trip):
+                    return existing, False
+                raise TripConflict(existing)
+
+            overlap = conn.execute(
+                "SELECT * FROM trips WHERE start_utc < ? AND end_utc > ? ORDER BY start_utc LIMIT 1",
+                (end, start),
+            ).fetchone()
+            if overlap is not None:
+                raise TripOverlap(self._from_row(overlap))
+
+            conn.execute(
                 """
                 INSERT INTO trips (id, start_utc, end_utc, local_date, amount, payment, commission)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
-                ON CONFLICT (id) DO NOTHING
                 """,
                 (
                     trip.id,
-                    _utc_text(trip.start),
-                    _utc_text(trip.end),
+                    start,
+                    end,
                     self.local_day(trip.start).isoformat(),
                     trip.amount,
                     trip.payment.value,
                     trip.commission,
                 ),
             )
-            if cur.rowcount == 1:
-                return self._localize(trip), True
-            row = conn.execute("SELECT * FROM trips WHERE id = ?", (trip.id,)).fetchone()
-
-        existing = self._from_row(row)
-        if existing.same_as(trip):
-            return existing, False
-        raise TripConflict(existing)
+        return self._localize(trip), True
 
     def list_by_day(self, day: date) -> list[Trip]:
         with self._connect() as conn:

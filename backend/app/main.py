@@ -9,7 +9,7 @@ from pydantic import TypeAdapter, ValidationError
 
 from . import config
 from .models import Day, Trip
-from .repository import TripConflict, TripRepository
+from .repository import TripConflict, TripOverlap, TripRepository
 from .summary import summarize
 
 log = logging.getLogger("diary")
@@ -51,16 +51,17 @@ def create_app(repo: TripRepository | None = None, seed_path: str | None = None)
         status_code=status.HTTP_201_CREATED,
         responses={
             200: {"description": "Same trip was already stored; nothing changed"},
-            409: {"description": "Trip id already used with different data"},
+            409: {"description": "Id already used with different data, or the time overlaps another trip"},
         },
     )
     def add_trip(trip: Trip, response: Response) -> Trip:
         try:
             stored, created = repo.add(trip)
-        except TripConflict as exc:
+        except (TripConflict, TripOverlap) as exc:
+            code = "id_conflict" if isinstance(exc, TripConflict) else "overlap"
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail={"message": str(exc), "existing": exc.existing.model_dump(mode="json")},
+                detail={"code": code, "message": str(exc), "existing": exc.existing.model_dump(mode="json")},
             ) from exc
         if not created:
             response.status_code = status.HTTP_200_OK
@@ -79,7 +80,7 @@ def import_trips(repo: TripRepository, path: Path) -> None:
             _, was_created = repo.add(trip)
             created += was_created
             skipped += not was_created
-        except (ValidationError, TripConflict) as exc:
+        except (ValidationError, TripConflict, TripOverlap) as exc:
             rejected += 1
             trip_id = item.get("id") if isinstance(item, dict) else item
             log.warning("seed: rejected trip %s: %s", trip_id, exc)

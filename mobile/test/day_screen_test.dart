@@ -113,4 +113,19 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Чт, 01.10.2026'), findsOneWidget);
   });
+
+  testWidgets('opens the date picker even for a day outside its range', (tester) async {
+    final client = MockClient((request) async => switch (request.url.path) {
+          '/api/days' => _json(['1999-06-01']),
+          '/api/days/1999-06-01' => _json(_emptyDay('1999-06-01')),
+          _ => http.Response('not found', 404),
+        });
+
+    await tester.pumpWidget(_app(client));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Вт, 01.06.1999'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(DatePickerDialog), findsOneWidget);
+  });
 }

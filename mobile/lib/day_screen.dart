@@ -85,11 +85,16 @@ class _DayScreenState extends State<DayScreen> {
   }
 
   Future<void> _pickDate() async {
+    // Same range the server accepts. The current day is clamped into it:
+    // showDatePicker throws if initialDate is outside [firstDate, lastDate].
+    final first = DateTime(2000);
+    final last = DateTime(2099, 12, 31);
+    final current = _date ?? _today;
     final picked = await showDatePicker(
       context: context,
-      initialDate: _date ?? _today,
-      firstDate: DateTime(2020),
-      lastDate: _today.add(const Duration(days: 365)),
+      initialDate: current.isBefore(first) ? first : (current.isAfter(last) ? last : current),
+      firstDate: first,
+      lastDate: last,
     );
     if (picked != null) _load(picked);
   }

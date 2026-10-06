@@ -1,10 +1,10 @@
 import os
-from datetime import timedelta, timezone
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
-# Kazakhstan has used a single time zone, UTC+5, since March 2024.
-# A trip belongs to the local calendar day on which it started.
-LOCAL_TZ = timezone(timedelta(hours=int(os.getenv("DIARY_UTC_OFFSET_HOURS", "5"))))
+# A trip belongs to the local calendar day on which it started. A named zone
+# (not a fixed +05:00) keeps old data right: Almaty was UTC+6 until March 2024.
+LOCAL_TZ = ZoneInfo(os.getenv("DIARY_TIMEZONE", "Asia/Almaty"))
 
 DB_PATH = Path(os.getenv("DIARY_DB_PATH", "diary.sqlite3"))
 

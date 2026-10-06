@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'api.dart';
 import 'day_screen.dart';
@@ -21,6 +22,10 @@ class DriverDiaryApp extends StatelessWidget {
     return MaterialApp(
       title: 'Дневник смен',
       debugShowCheckedModeBanner: false,
+      // Russian system widgets (date picker, tooltips) to match the rest of the UI.
+      locale: const Locale('ru'),
+      supportedLocales: const [Locale('ru')],
+      localizationsDelegates: GlobalMaterialLocalizations.delegates,
       theme: ThemeData(colorSchemeSeed: const Color(0xFF1E6B52), useMaterial3: true),
       darkTheme: ThemeData(
         colorSchemeSeed: const Color(0xFF1E6B52),

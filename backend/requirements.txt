@@ -1,2 +1,5 @@
 fastapi>=0.115,<1
 uvicorn[standard]>=0.30,<1
+# Time zone database for containers without system zoneinfo; 2024.1+ has
+# Kazakhstan's March 2024 switch to UTC+5.
+tzdata>=2024.1
