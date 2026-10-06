@@ -136,4 +136,33 @@ void main() {
 
     expect(find.byType(DatePickerDialog), findsOneWidget);
   });
+
+  testWidgets('fits a small phone with large text and big amounts', (tester) async {
+    // 320px wide (iPhone SE) with the system font enlarged by 30%.
+    tester.view.physicalSize = const Size(640, 1136);
+    tester.view.devicePixelRatio = 2;
+    tester.platformDispatcher.textScaleFactorTestValue = 1.3;
+    addTearDown(tester.view.reset);
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+    final client = MockClient((request) async => switch (request.url.path) {
+          '/api/days' => _json(['2026-10-01']),
+          '/api/days/2026-10-01' => _json({
+              'date': '2026-10-01',
+              'summary': {'trips_count': 120, 'revenue': 99999999, 'commission': 9999999,
+                          'net': 90000000, 'cash': 49999999, 'card': 50000000},
+              'trips': [
+                {'id': 'big', 'start': '2026-10-01T08:10:00+05:00', 'end': '2026-10-01T19:59:00+05:00',
+                 'amount': 9999999, 'payment': 'cash', 'commission': 9999999},
+              ],
+            }),
+          _ => http.Response('not found', 404),
+        });
+
+    await tester.pumpWidget(_app(client));
+    await tester.pumpAndSettle();
+
+    // A layout overflow would have failed the test above; also check nothing was cut off.
+    expect(find.text('49\u00A0999\u00A0999\u00A0₸'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 }

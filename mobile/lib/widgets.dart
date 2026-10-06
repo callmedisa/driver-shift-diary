@@ -61,9 +61,12 @@ class DayHeader extends StatelessWidget {
                 children: [
                   const Icon(Icons.local_taxi_rounded, color: Colors.white),
                   const SizedBox(width: 8),
-                  Text(
-                    'Дневник смен',
-                    style: text.titleLarge?.copyWith(color: Colors.white, fontWeight: FontWeight.w700),
+                  Flexible(
+                    child: Text(
+                      'Дневник смен',
+                      overflow: TextOverflow.ellipsis,
+                      style: text.titleLarge?.copyWith(color: Colors.white, fontWeight: FontWeight.w700),
+                    ),
                   ),
                 ],
               ),
@@ -123,12 +126,17 @@ class _DateSwitcher extends StatelessWidget {
                   children: [
                     const Icon(Icons.calendar_today_rounded, size: 16, color: Colors.white),
                     const SizedBox(width: 8),
-                    Text(
-                      date == null ? '…' : displayDate(date!),
-                      style: Theme.of(context)
-                          .textTheme
-                          .titleMedium
-                          ?.copyWith(color: Colors.white, fontWeight: FontWeight.w600),
+                    Flexible(
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          date == null ? '…' : displayDate(date!),
+                          style: Theme.of(context)
+                              .textTheme
+                              .titleMedium
+                              ?.copyWith(color: Colors.white, fontWeight: FontWeight.w600),
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -268,12 +276,10 @@ class PaymentSplit extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(child: _Legend(Payment.cash, 'Наличные', summary.cash)),
-              Expanded(child: _Legend(Payment.card, 'Карта', summary.card)),
-            ],
-          ),
+          // One row per payment type: side by side, the amounts got cut off on 320px screens.
+          _Legend(Payment.cash, 'Наличные', summary.cash),
+          const SizedBox(height: 6),
+          _Legend(Payment.card, 'Карта', summary.card),
         ],
       ),
     );
@@ -298,14 +304,17 @@ class _Legend extends StatelessWidget {
           decoration: BoxDecoration(color: paymentColor(payment), shape: BoxShape.circle),
         ),
         const SizedBox(width: 8),
-        Text(label, style: text.bodyMedium?.copyWith(color: AppColors.muted)),
-        const SizedBox(width: 6),
-        Flexible(
+        Expanded(
           child: Text(
-            formatTenge(amount),
+            label,
             overflow: TextOverflow.ellipsis,
-            style: text.bodyMedium?.copyWith(color: AppColors.text, fontWeight: FontWeight.w600),
+            style: text.bodyMedium?.copyWith(color: AppColors.muted),
           ),
+        ),
+        // The amount matters more than the label, so it keeps its full width.
+        Text(
+          formatTenge(amount),
+          style: text.bodyMedium?.copyWith(color: AppColors.text, fontWeight: FontWeight.w600),
         ),
       ],
     );
