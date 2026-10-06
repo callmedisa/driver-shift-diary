@@ -2,9 +2,11 @@
 
 Сервер на **FastAPI** и мобильное приложение на **Flutter**: сводка за день (поездки, выручка, комиссия, «на руки», наличные/карта), список поездок, переключение дней, добавление поездки через API с проверкой данных и защитой от дублей.
 
-| 1 октября | 2 октября | День без поездок |
-|---|---|---|
-| ![1 октября](docs/day-oct-01.jpg) | ![2 октября](docs/day-oct-02.jpg) | ![Пустой день](docs/day-empty.jpg) |
+| 2 октября | 1 октября | День без поездок | Выбор даты |
+|---|---|---|---|
+| ![2 октября](docs/android/1-day-oct-02.png) | ![1 октября](docs/android/2-day-oct-01.png) | ![Пустой день](docs/android/3-day-empty.png) | ![Выбор даты](docs/android/4-date-picker.png) |
+
+Скриншоты сняты автоматически на Android-эмуляторе в CI: приложение ходит в настоящий API, загруженный из [`data/trips.json`](data/trips.json) (см. [интеграционный тест](mobile/integration_test/app_test.dart)).
 
 ## Запуск
 
@@ -32,7 +34,7 @@ flutter run -d chrome                                          # в браузе
 (cd mobile && flutter test)
 ```
 
-Те же проверки и smoke-тест Docker-контейнера запускаются в GitHub Actions на каждый push ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)).
+Те же проверки и smoke-тест Docker-контейнера запускаются в GitHub Actions на каждый push ([`ci.yml`](.github/workflows/ci.yml)). Отдельный workflow [`devices.yml`](.github/workflows/devices.yml) собирает release APK и запускает приложение на Android-эмуляторе против настоящего API: открывает последний день с поездками, переключает дни, открывает календарь и сохраняет скриншоты в артефакты сборки.
 
 ## API
 
