@@ -47,7 +47,7 @@ jobs:
           disable-animations: true
           working-directory: mobile
           # 10.0.2.2 is the host machine (where the API runs) as seen from the emulator.
-          script: flutter drive --driver=test_driver/integration_test.dart --target=integration_test/app_test.dart --dart-define=API_BASE_URL=http://10.0.2.2:8000
+          script: flutter drive --driver=test_driver/integration_test.dart --target=integration_test/app_test.dart --dart-define=API_BASE_URL=http://10.0.2.2:8000 --dart-define=SCREENSHOTS=true
 
       - uses: actions/upload-artifact@v4
         if: always()
@@ -58,7 +58,7 @@ jobs:
 
   ios:
     runs-on: macos-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
 
@@ -92,9 +92,26 @@ jobs:
           xcrun simctl bootstatus "$UDID" -b
           echo "SIMULATOR_UDID=$UDID" >> "$GITHUB_ENV"
 
-      - name: Run the app on the iPhone simulator
+      # Build separately so a slow first Xcode build is visible on its own.
+      - name: Build the app for the simulator
+        timeout-minutes: 25
         working-directory: mobile
-        run: flutter drive -d "$SIMULATOR_UDID" --driver=test_driver/integration_test.dart --target=integration_test/app_test.dart --dart-define=API_BASE_URL=http://localhost:8000
+        run: flutter build ios --simulator --debug --dart-define=API_BASE_URL=http://localhost:8000
+
+      - name: Screenshot the app on the iPhone simulator
+        timeout-minutes: 5
+        working-directory: mobile
+        run: |
+          mkdir -p screenshots
+          xcrun simctl install "$SIMULATOR_UDID" build/ios/iphonesimulator/Runner.app
+          xcrun simctl launch "$SIMULATOR_UDID" cc.arqa.test.driverDiary
+          sleep 20
+          xcrun simctl io "$SIMULATOR_UDID" screenshot screenshots/ios-day.png
+
+      - name: Run the integration test on the iPhone simulator
+        timeout-minutes: 15
+        working-directory: mobile
+        run: flutter test integration_test/app_test.dart -d "$SIMULATOR_UDID" --dart-define=API_BASE_URL=http://localhost:8000 -r expanded
 
       - uses: actions/upload-artifact@v4
         if: always()

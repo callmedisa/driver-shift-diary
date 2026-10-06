@@ -1,7 +1,9 @@
 // End-to-end check on a real emulator/simulator against the real API
 // (started from data/trips.json). Run by CI; locally:
-//   flutter drive --driver=test_driver/integration_test.dart \
-//     --target=integration_test/app_test.dart --dart-define=API_BASE_URL=http://localhost:8000
+//   flutter test integration_test/app_test.dart --dart-define=API_BASE_URL=http://localhost:8000
+// With screenshots (saved to mobile/screenshots/):
+//   flutter drive --driver=test_driver/integration_test.dart --target=integration_test/app_test.dart \
+//     --dart-define=API_BASE_URL=http://localhost:8000 --dart-define=SCREENSHOTS=true
 import 'dart:io';
 
 import 'package:driver_diary/main.dart' as app;
@@ -9,6 +11,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 
 const _nbsp = ' ';
+
+/// Screenshots need `flutter drive` with test_driver/integration_test.dart
+/// (used on Android). On iOS CI runs `flutter test` and screenshots the
+/// simulator instead, so in-test screenshots are opt-in.
+const _takeScreenshots = bool.fromEnvironment('SCREENSHOTS');
 
 void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -57,6 +64,7 @@ Future<void> _waitFor(WidgetTester tester, Finder finder,
 bool _surfaceConverted = false;
 
 Future<void> _screenshot(IntegrationTestWidgetsFlutterBinding binding, WidgetTester tester, String name) async {
+  if (!_takeScreenshots) return;
   if (Platform.isAndroid && !_surfaceConverted) {
     // Android needs the Flutter surface converted to an image once before screenshots.
     await binding.convertFlutterSurfaceToImage();
